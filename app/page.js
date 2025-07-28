@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -154,7 +156,7 @@ export default function HomePage() {
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
 
         {/* Supported Formats */}
-        <p className="text-xs text-gray-500 mt-4 text-center">Supported formats: JPG, PNG, SVG (Max 10MB)</p>
+        <p className="text-xs text-gray-500 mt-4 text-center">Supported format: JPG (Max 5MB)</p>
 
         {/* Submit Button */}
         {selectedFile && (
