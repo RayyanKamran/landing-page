@@ -1,6 +1,9 @@
-// app/layout.jsx
 import "./globals.css";
-import AuthProvider from "@/components/AuthProvider"; // adjust path if needed
+import dynamic from "next/dynamic";
+
+const AuthProvider = dynamic(() => import("@/components/Auth0ClientProvider"), {
+  ssr: false,
+});
 
 export const metadata = {
   title: "Design Your Own Shirt OYE",

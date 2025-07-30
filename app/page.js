@@ -15,7 +15,22 @@ export default function HomePage() {
   const fileInputRef = useRef(null);
 
   const handleFileSelect = useCallback((file) => {
-    if (file && file.type.startsWith("image/")) {
+    if (file) {
+      // Check if file is JPG (including JPEG)
+      const isJpg = file.type === "image/jpeg" || file.type === "image/jpg";
+
+      if (!isJpg) {
+        alert("Please upload a valid JPG file only");
+        return;
+      }
+
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size exceeds 5MB limit");
+        return;
+      }
+
+      // If all validations pass
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
@@ -96,9 +111,9 @@ export default function HomePage() {
   }, [previewUrl]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-green-50 flex flex-col">
+    <div className="bg-gradient-to-b from-blue-50 to-green-50 flex flex-col">
       {/* Header with Gallery Button */}
-      <header className="w-full p-4 flex justify-end">
+      <header className="w-full p-4 flex justify-between items-center">
         <Button
           variant="outline"
           className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
@@ -107,24 +122,32 @@ export default function HomePage() {
           Gallery
         </Button>
 
-        <Button
-          variant="outline"
-          className="flex items-center border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-          onClick={() => loginWithRedirect()}
-        >
-          Log In
-        </Button>
-
-        <Button
-          variant="outline"
-          className="flex items-center border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-          onClick={() =>
-            logout({ logoutParams: { returnTo: window.location.origin } })
-          }
-        >
-          Log Out
-        </Button>
-        {isAuthenticated && <p>Welcome, {user.name}</p>}
+        <div className="flex items-center gap-4">
+          {isAuthenticated ? (
+            <>
+              <span className="text-sm text-gray-600">
+                Welcome, {user.name}
+              </span>
+              <Button
+                variant="outline"
+                className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                onClick={() =>
+                  logout({ logoutParams: { returnTo: window.location.origin } })
+                }
+              >
+                Log Out
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+              onClick={() => loginWithRedirect()}
+            >
+              Log In
+            </Button>
+          )}
+        </div>
       </header>
 
       {/* Main Content */}
@@ -201,14 +224,14 @@ export default function HomePage() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,image/jpeg"
           onChange={handleFileUpload}
           className="hidden"
         />
 
         {/* Supported Formats */}
         <p className="text-xs text-gray-500 mt-4 text-center">
-          Supported formats: JPG, PNG, SVG (Max 10MB)
+          Supported format: JPG only (Max 5MB)
         </p>
 
         {/* Submit Button */}
