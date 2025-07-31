@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Button } from "@/components/button";
+import { Card } from "@/components/card";
 import { Upload, ImageIcon, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -37,21 +37,102 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleSubmit = () => {
-    if (!isAuthenticated) {
-      loginWithRedirect(); // Prompt login
-      return;
-    }
+  const [authLoading, setAuthLoading] = useState(false);
 
-    if (!selectedFile) {
-      alert("Please upload a design first.");
-      return;
-    }
+  const handleSubmit = async () => {
+    setAuthLoading(true);
+    try {
+      if (!isAuthenticated) {
+        // Store file in localStorage before redirect
+        if (selectedFile) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            localStorage.setItem(
+              "pendingUpload",
+              JSON.stringify({
+                name: selectedFile.name,
+                type: selectedFile.type,
+                size: selectedFile.size,
+                data: e.target.result.split(",")[1], // Base64 encoded
+              })
+            );
+          };
+          reader.readAsDataURL(selectedFile);
+        }
 
-    // You can replace this with actual upload logic
-    console.log("Uploading file:", selectedFile);
-    alert(`Design "${selectedFile.name}" submitted successfully!`);
+        await loginWithRedirect({
+          authorizationParams: {
+            screen_hint: "signup",
+            prompt: "login",
+          },
+        });
+        return;
+      }
+
+      if (!selectedFile) {
+        alert("Please upload a design first.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.message || "Upload failed");
+      }
+
+      alert(`Design "${selectedFile.name}" uploaded successfully!`);
+    } catch (err) {
+      alert("Error uploading file: " + err.message);
+    } finally {
+      setAuthLoading(false);
+    }
   };
+
+  useEffect(() => {
+    const handleReturnFromAuth = async () => {
+      if (isAuthenticated) {
+        const pendingUpload = localStorage.getItem("pendingUpload");
+        if (pendingUpload) {
+          try {
+            const uploadData = JSON.parse(pendingUpload);
+            const byteString = atob(uploadData.data);
+            const arrayBuffer = new ArrayBuffer(byteString.length);
+            const uintArray = new Uint8Array(arrayBuffer);
+
+            for (let i = 0; i < byteString.length; i++) {
+              uintArray[i] = byteString.charCodeAt(i);
+            }
+
+            const file = new File([arrayBuffer], uploadData.name, {
+              type: uploadData.type,
+            });
+
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+            localStorage.removeItem("pendingUpload");
+
+            // Optional
+            alert(
+              `Welcome back! Your design "${uploadData.name}" is ready to submit.`
+            );
+          } catch (error) {
+            console.error("Error restoring file:", error);
+            alert("Couldn't restore your design. Please upload it again.");
+          }
+        }
+      }
+    };
+
+    handleReturnFromAuth();
+  }, [isAuthenticated]); // Only runs when auth state changes
 
   const handleFileUpload = useCallback(
     (event) => {
@@ -114,13 +195,15 @@ export default function HomePage() {
     <div className="bg-gradient-to-b from-blue-50 to-green-50 flex flex-col">
       {/* Header with Gallery Button */}
       <header className="w-full p-4 flex justify-between items-center">
-        <Button
-          variant="outline"
-          className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-        >
-          <ImageIcon className="w-4 h-4" />
-          Gallery
-        </Button>
+        <Link href="/gallery">
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+          >
+            <ImageIcon className="w-4 h-4" />
+            Gallery
+          </Button>
+        </Link>
 
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
@@ -151,7 +234,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 -mt-16">
+      <main className="bg-gradient-to-b from-blue-50 to-green-50">
         {/* Logo/Title */}
         <div className="text-center mb-8">
           <h1 className="text-6xl font-light text-blue-600 mb-2">
@@ -161,65 +244,72 @@ export default function HomePage() {
         </div>
 
         {/* Upload Box */}
-        <Card
-          className={`w-full max-w-md p-8 border-2 border-dashed transition-colors cursor-pointer ${
-            isDragOver
-              ? "border-blue-400 bg-blue-50"
-              : selectedFile
-              ? "border-green-400 bg-green-50"
-              : "border-gray-300 hover:border-blue-300"
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={openFileDialog}
-        >
-          <div className="text-center">
-            {previewUrl ? (
-              <div className="relative">
-                <img
-                  src={previewUrl || "/placeholder.svg"}
-                  alt="Preview"
-                  className="w-full h-32 object-cover rounded-md mb-4"
-                />
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearFile();
-                  }}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-                <p className="text-sm font-medium text-green-700">
-                  {selectedFile?.name}
-                </p>
-                <p className="text-xs text-gray-500">Click to change file</p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <Upload
-                    className={`w-12 h-12 mx-auto transition-colors ${
-                      isDragOver ? "text-blue-500" : "text-gray-400"
-                    }`}
+        <div className="flex justify-center w-full px-4">
+          <Card
+            className={`w-full max-w-md border-2 border-dashed transition-colors cursor-pointer ${
+              isDragOver
+                ? "border-blue-400 bg-blue-50"
+                : selectedFile
+                ? "border-green-400 bg-green-50"
+                : "border-gray-300 hover:border-blue-300"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={openFileDialog}
+          >
+            <div className="text-center">
+              {previewUrl ? (
+                <div className="relative">
+                  <img
+                    src={previewUrl || "/placeholder.svg"}
+                    alt="Preview"
+                    className="w-full h-32 object-cover rounded-md mb-4"
                   />
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearFile();
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <p className="text-sm font-medium text-green-700">
+                    {selectedFile?.name}
+                  </p>
+                  <p className="text-xs text-gray-500">Click to change file</p>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {isDragOver ? "Drop your design here" : "Upload your design"}
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Drag and drop your image here, or click to browse
-                </p>
-                <Button type="button" className="bg-blue-600 hover:bg-blue-700">
-                  Choose File
-                </Button>
-              </>
-            )}
-          </div>
-        </Card>
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <Upload
+                      className={`w-12 h-12 mx-auto transition-colors ${
+                        isDragOver ? "text-blue-500" : "text-gray-400"
+                      }`}
+                    />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {isDragOver
+                      ? "Drop your design here"
+                      : "Upload your design"}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Drag and drop your image here, or click to browse
+                  </p>
+                  <Button
+                    type="button"
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Choose File
+                  </Button>
+                </>
+              )}
+            </div>
+          </Card>
+        </div>
 
         <input
           ref={fileInputRef}
@@ -235,20 +325,29 @@ export default function HomePage() {
         </p>
 
         {/* Submit Button */}
-        {selectedFile && (
-          <div className="mt-6 flex gap-3">
-            <Button
-              size="lg"
-              className="px-8 bg-green-600 hover:bg-green-700"
-              onClick={handleSubmit}
-            >
-              Submit Design
-            </Button>
-            <Button variant="outline" size="lg" onClick={clearFile}>
-              Clear
-            </Button>
-          </div>
-        )}
+        <div className="flex justify-center w-full px-4">
+          {selectedFile && (
+            <div className="mt-6 flex gap-3">
+              <Button
+                size="lg"
+                className="px-8 bg-green-600 hover:bg-green-700"
+                onClick={handleSubmit}
+                disabled={!selectedFile} // Disable if no file selected
+              >
+                {isAuthenticated ? "Submit Design" : "Sign Up to Submit"}
+              </Button>
+              {selectedFile && !isAuthenticated && (
+                <p className="text-sm text-red-500">
+                  Please sign up to submit your design
+                </p>
+              )}
+
+              <Button variant="outline" size="lg" onClick={clearFile}>
+                Clear
+              </Button>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Footer */}

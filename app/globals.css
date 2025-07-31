@@ -74,3 +74,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.my-masonry-column {
+  background-clip: padding-box;
+}
+
+.my-masonry-column > div {
+  margin-bottom: 16px;
+}
