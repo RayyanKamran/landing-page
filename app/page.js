@@ -60,12 +60,8 @@ export default function HomePage() {
           reader.readAsDataURL(selectedFile);
         }
 
-        await loginWithRedirect({
-          authorizationParams: {
-            screen_hint: "signup",
-            prompt: "login",
-          },
-        });
+        await loginWithRedirect();
+
         return;
       }
 

@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const uploadDir = path.join(process.cwd(), "./uploads");
+  const uploadDir = path.join(process.cwd(), "./public/uploads");
 
   // Ensure the upload directory exists
   fs.mkdirSync(uploadDir, { recursive: true });
