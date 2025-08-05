@@ -20,7 +20,7 @@ export default function HomePage() {
       const isJpg = file.type === "image/jpeg" || file.type === "image/jpg";
 
       if (!isJpg) {
-        alert("Please upload a valid JPG file only");
+        alert("Please upload a valid JPG/JPEG file only");
         return;
       }
 
@@ -189,7 +189,7 @@ export default function HomePage() {
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-green-50 flex flex-col">
-      {/* Header with Gallery Button */}
+      {/* Header*/}
       <header className="w-full p-4 flex justify-between items-center">
         <Link href="/gallery">
           <Button
@@ -317,7 +317,7 @@ export default function HomePage() {
 
         {/* Supported Formats */}
         <p className="text-xs text-gray-500 mt-4 text-center">
-          Supported format: JPG only (Max 5MB)
+          Supported format: JPG/JPEG only (Max 5MB)
         </p>
 
         {/* Submit Button */}
@@ -344,6 +344,34 @@ export default function HomePage() {
             </div>
           )}
         </div>
+
+        {/* Rules */}
+        <section className="w-full max-w-2xl mx-auto text-center mt-12 px-4">
+          <h2 className="text-2xl font-semibold text-blue-700 mb-4">
+            Design Submission Rules
+          </h2>
+          <ul className="text-sm text-gray-700 list-disc list-inside space-y-2 text-left ml-8 pl-4">
+            <li>
+              Designs must be in <strong>JPG format</strong> and under{" "}
+              <strong>5MB</strong>.
+            </li>
+            <li>
+              Only <strong>original artwork</strong> is allowed — no copyrighted
+              or trademarked content.
+            </li>
+            <li>
+              Keep the design centered and visually suitable for a t-shirt
+              layout.
+            </li>
+            <li>
+              Avoid offensive or inappropriate content — we review all
+              submissions.
+            </li>
+            <li>
+              Make sure your design looks good on both light and dark shirts.
+            </li>
+          </ul>
+        </section>
       </main>
 
       {/* Footer */}
