@@ -1,5 +1,6 @@
 // components/Auth0ClientProvider.jsx
 "use client";
+
 import { Auth0Provider } from "@auth0/auth0-react";
 
 export default function Auth0ClientProvider({ children }) {
@@ -8,9 +9,9 @@ export default function Auth0ClientProvider({ children }) {
       domain={process.env.NEXT_PUBLIC_AUTH0_DOMAIN}
       clientId={process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: `${window.location.origin}`,
+        redirect_uri:
+          typeof window !== "undefined" ? window.location.origin : "",
       }}
-      cacheLocation="localstorage"
     >
       {children}
     </Auth0Provider>

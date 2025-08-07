@@ -6,13 +6,17 @@ import { Card } from "@/components/card";
 import { Upload, ImageIcon, X } from "lucide-react";
 import Link from "next/link";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useRouter } from "next/navigation";
 
 export default function HomePage() {
-  const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
+  const { loginWithRedirect, logout, isAuthenticated, user, isLoading } =
+    useAuth0();
+  const [authHandled, setAuthHandled] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
+  const router = useRouter();
 
   const handleFileSelect = useCallback((file) => {
     if (file) {
@@ -42,93 +46,76 @@ export default function HomePage() {
   const handleSubmit = async () => {
     setAuthLoading(true);
     try {
-      if (!isAuthenticated) {
-        // Store file in localStorage before redirect
-        if (selectedFile) {
-          const reader = new FileReader();
-          reader.onload = (e) => {
+      if (!selectedFile) {
+        alert("Please upload a design first.");
+        return;
+      }
+
+      // Save to localStorage
+      await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
             localStorage.setItem(
               "pendingUpload",
               JSON.stringify({
                 name: selectedFile.name,
                 type: selectedFile.type,
                 size: selectedFile.size,
-                data: e.target.result.split(",")[1], // Base64 encoded
+                data: e.target.result.split(",")[1], // Base64
               })
             );
-          };
-          reader.readAsDataURL(selectedFile);
-        }
-
-        await loginWithRedirect();
-
-        return;
-      }
-
-      if (!selectedFile) {
-        alert("Please upload a design first.");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
+            localStorage.setItem("fromUpload", "true"); // <-- IMPORTANT!
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
       });
 
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.message || "Upload failed");
+      // Redirect to login if not authenticated
+      if (!isAuthenticated) {
+        loginWithRedirect({
+          appState: { returnTo: "/submit-page" },
+        });
+      } else {
+        // User is already authenticated, go straight to submit page
+        router.push("/submit-page");
       }
-
-      alert(`Design "${selectedFile.name}" uploaded successfully!`);
     } catch (err) {
-      alert("Error uploading file: " + err.message);
+      alert("Error: " + err.message);
     } finally {
       setAuthLoading(false);
     }
   };
 
   useEffect(() => {
-    const handleReturnFromAuth = async () => {
-      if (isAuthenticated) {
-        const pendingUpload = localStorage.getItem("pendingUpload");
-        if (pendingUpload) {
+    if (!isLoading && isAuthenticated && !authHandled) {
+      const fromUpload = localStorage.getItem("fromUpload");
+      const stored = localStorage.getItem("pendingUpload");
+
+      if (fromUpload === "true") {
+        if (stored) {
           try {
-            const uploadData = JSON.parse(pendingUpload);
-            const byteString = atob(uploadData.data);
-            const arrayBuffer = new ArrayBuffer(byteString.length);
-            const uintArray = new Uint8Array(arrayBuffer);
-
-            for (let i = 0; i < byteString.length; i++) {
-              uintArray[i] = byteString.charCodeAt(i);
-            }
-
-            const file = new File([arrayBuffer], uploadData.name, {
-              type: uploadData.type,
-            });
-
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
-            localStorage.removeItem("pendingUpload");
-
-            // Optional
-            alert(
-              `Welcome back! Your design "${uploadData.name}" is ready to submit.`
-            );
-          } catch (error) {
-            console.error("Error restoring file:", error);
-            alert("Couldn't restore your design. Please upload it again.");
+            JSON.parse(stored);
+            router.push("/submit-page");
+          } catch (e) {
+            alert("Corrupted image data. Please upload again.");
+            router.push("/");
           }
+        } else {
+          alert("No design found. Please upload one first.");
+          router.push("/");
         }
-      }
-    };
 
-    handleReturnFromAuth();
-  }, [isAuthenticated]); // Only runs when auth state changes
+        localStorage.removeItem("fromUpload"); // ✅ clean up
+      }
+
+      setAuthHandled(true);
+    }
+  }, [isLoading, isAuthenticated, authHandled, router]);
 
   const handleFileUpload = useCallback(
     (event) => {
@@ -232,11 +219,12 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="bg-gradient-to-b from-blue-50 to-green-50">
         {/* Logo/Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-6xl font-light text-blue-600 mb-2">
-            Design your own shirt
-          </h1>
-          <p className="text-4xl text-green-600 font-light">OYE</p>
+        <div className="text-center mb-5">
+          <img
+            src="/Dyot (black).png"
+            alt="Logo"
+            className="mx-auto w-48 h-auto"
+          />
         </div>
 
         {/* Upload Box */}
@@ -330,7 +318,7 @@ export default function HomePage() {
                 onClick={handleSubmit}
                 disabled={!selectedFile} // Disable if no file selected
               >
-                {isAuthenticated ? "Submit Design" : "Sign Up to Submit"}
+                {isAuthenticated ? "Upload Design" : "Sign Up to Submit"}
               </Button>
               {selectedFile && !isAuthenticated && (
                 <p className="text-sm text-red-500">
@@ -350,7 +338,7 @@ export default function HomePage() {
           <h2 className="text-2xl font-semibold text-blue-700 mb-4">
             Design Submission Rules
           </h2>
-          <ul className="text-sm text-gray-700 list-disc list-inside space-y-2 text-left ml-8 pl-4">
+          <ul className="text-sm text-gray-700 list-disc list-inside space-y-2 text-left ml-8 pl-4y">
             <li>
               Designs must be in <strong>JPG format</strong> and under{" "}
               <strong>5MB</strong>.

@@ -29,14 +29,18 @@ export default function GalleryPage() {
       const res = await fetch(`/api/images?page=${page}&limit=${LIMIT}`);
       const data = await res.json();
 
-      const newImages = Array.isArray(data.images)
-        ? data.images
-        : Array.isArray(data)
-        ? data
-        : [];
+      if (data?.images?.length > 0) {
+        // Avoid adding duplicates
+        setImages((prev) => {
+          const seen = new Set(prev.map((img) => img.url));
+          const uniqueNewImages = data.images.filter(
+            (img) => !seen.has(img.url)
+          );
+          return [...prev, ...uniqueNewImages];
+        });
+      }
 
-      setImages((prev) => [...prev, ...newImages]);
-      setHasMore(data.hasMore ?? newImages.length === LIMIT);
+      setHasMore(data.hasMore);
       setPage((prev) => prev + 1);
     } catch (err) {
       console.error("Failed to load images", err);
@@ -47,6 +51,7 @@ export default function GalleryPage() {
 
   useEffect(() => {
     fetchImages();
+    console.log(`Fetching page ${page}`);
   }, []);
 
   const lastImageRef = useCallback(
@@ -66,15 +71,25 @@ export default function GalleryPage() {
   );
 
   return (
-    <main className="min-h-screen p-8 bg-gradient-to-br from-blue-50 to-green-50">
-      <header className="flex justify-start mb-8">
+    <main className="min-h-screen p-4 bg-gradient-to-br from-blue-50 to-green-50">
+      <header className="flex justify-between items-center mb-8">
         <Link href="/" passHref>
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+            className="flex items-center border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
           >
             ← Home
+          </Button>
+        </Link>
+
+        <Link href="/submit-page" passHref>
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+          >
+            + Submit Design
           </Button>
         </Link>
       </header>
