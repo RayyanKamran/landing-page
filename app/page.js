@@ -65,7 +65,7 @@ export default function HomePage() {
                 data: e.target.result.split(",")[1], // Base64
               })
             );
-            localStorage.setItem("fromUpload", "true"); // <-- IMPORTANT!
+            localStorage.setItem("fromUpload", "true");
             resolve();
           } catch (err) {
             reject(err);

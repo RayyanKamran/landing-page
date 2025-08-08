@@ -109,37 +109,35 @@ export default function GalleryPage() {
             <div
               key={i}
               ref={isLast ? lastImageRef : null}
-              className="relative bg-white rounded-xl overflow-hidden shadow-lg w-full max-w-[600px] mx-auto"
+              className="relative w-full h-[350px] bg-white rounded-xl overflow-hidden shadow-lg max-w-[600px] mx-auto"
             >
               {/* T-shirt mockup */}
               <Image
                 src="/tshirt.jpg"
-                alt="T-shirt mockup"
-                width={600}
-                height={800}
-                className="w-full h-auto object-contain"
-                unoptimized
+                alt="T-shirt"
+                width={350}
+                height={350}
+                className="w-full h-full object-cover"
               />
 
-              {/* Design overlay */}
+              {/* Uploaded design overlay */}
               <div
                 className="absolute"
                 style={{
-                  top: "33%",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: "40%",
-                  height: "auto",
+                  top: `${image.position?.y ?? 30}%`,
+                  left: `${image.position?.x ?? 30}%`,
+                  width: `${image.size?.width ?? 40}%`,
+                  height: `${image.size?.height ?? 40}%`,
+                  transform: "translate(-0%, 0%)",
+                  zIndex: 10,
                 }}
               >
                 <Image
                   src={image.url}
-                  alt={`Uploaded Design ${i}`}
-                  layout="responsive"
-                  width={1}
-                  height={1}
-                  className="object-contain"
-                  unoptimized
+                  alt="User Design"
+                  width={350}
+                  height={350}
+                  className="w-full h-full object-contain"
                 />
               </div>
             </div>

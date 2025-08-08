@@ -30,19 +30,64 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Error parsing the files" });
     }
 
-    // Assuming you're uploading a single file with field name 'file'
     const uploadedFile = files.file?.[0] || files.file;
-
     if (!uploadedFile) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
     const filePath = uploadedFile.filepath || uploadedFile.path;
     const fileName = path.basename(filePath);
+    const fileUrl = `/uploads/${fileName}`;
+
+    // Extract position and size from fields
+    let position = {};
+    let size = {};
+
+    try {
+      if (fields.position) {
+        position = JSON.parse(fields.position?.[0] || fields.position);
+      }
+      if (fields.size) {
+        size = JSON.parse(fields.size?.[0] || fields.size);
+      }
+    } catch (parseErr) {
+      console.error("Failed to parse position/size JSON", parseErr);
+      return res.status(400).json({ error: "Invalid position or size format" });
+    }
+
+    //SAVE METADATA TO data.json
+    const uploadsJsonPath = path.join(
+      process.cwd(),
+      "./public/uploads/data.json"
+    );
+
+    let existing = [];
+    if (fs.existsSync(uploadsJsonPath)) {
+      const raw = fs.readFileSync(uploadsJsonPath, "utf-8");
+      try {
+        existing = raw.trim() ? JSON.parse(raw) : [];
+      } catch (e) {
+        console.error("Failed to parse uploads JSON:", e);
+        existing = []; // fallback to empty if malformed
+      }
+    }
+
+    const newEntry = {
+      url: fileUrl,
+      position,
+      size,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    existing.push(newEntry);
+
+    fs.writeFileSync(uploadsJsonPath, JSON.stringify(existing, null, 2));
 
     return res.status(200).json({
       message: "File uploaded successfully",
-      fileUrl: `/uploads/${fileName}`,
+      fileUrl,
+      position,
+      size,
     });
   });
 }
