@@ -4,6 +4,7 @@ import Masonry from "react-masonry-css";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/button";
+import { useAuth0 } from "@auth0/auth0-react"; // Add this import
 
 const breakpointColumnsObj = {
   default: 3,
@@ -20,6 +21,7 @@ export default function GalleryPage() {
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef();
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated, loginWithRedirect } = useAuth0(); // Add this line
 
   const fetchImages = async () => {
     if (loading || !hasMore) return;
@@ -83,15 +85,22 @@ export default function GalleryPage() {
           </Button>
         </Link>
 
-        <Link href="/submit-page" passHref>
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-blue-600 text-white hover:bg-blue-700"
-          >
-            + Submit Design
-          </Button>
-        </Link>
+        <Button
+          variant="default"
+          size="sm"
+          className="bg-blue-600 text-white hover:bg-blue-700"
+          onClick={() => {
+            if (isAuthenticated) {
+              window.location.href = "/submit-page";
+            } else {
+              loginWithRedirect({
+                appState: { returnTo: "/submit-page" },
+              });
+            }
+          }}
+        >
+          + Submit Design
+        </Button>
       </header>
 
       <h1 className="text-4xl font-bold text-center mb-8 text-blue-600">

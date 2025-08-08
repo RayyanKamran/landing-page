@@ -11,12 +11,12 @@ import { useRouter } from "next/navigation";
 export default function HomePage() {
   const { loginWithRedirect, logout, isAuthenticated, user, isLoading } =
     useAuth0();
+  const router = useRouter();
   const [authHandled, setAuthHandled] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
-  const router = useRouter();
 
   const handleFileSelect = useCallback((file) => {
     if (file) {
@@ -92,9 +92,20 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    // Check if redirected from Auth0 with appState
     if (!isLoading && isAuthenticated && !authHandled) {
       const fromUpload = localStorage.getItem("fromUpload");
       const stored = localStorage.getItem("pendingUpload");
+
+      // Check for Auth0 appState returnTo
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnTo = urlParams.get("returnTo");
+
+      if (returnTo) {
+        router.push(returnTo);
+        setAuthHandled(true);
+        return;
+      }
 
       if (fromUpload === "true") {
         if (stored) {
@@ -110,7 +121,7 @@ export default function HomePage() {
           router.push("/");
         }
 
-        localStorage.removeItem("fromUpload"); // ✅ clean up
+        localStorage.removeItem("fromUpload");
       }
 
       setAuthHandled(true);
